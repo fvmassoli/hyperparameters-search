@@ -18,7 +18,7 @@ import numpy as np
 from tqdm import tqdm as tq
 
 ###############
-# Tube imports
+# Tune imports
 ###############
 import ray
 from hyperopt import hp
@@ -40,9 +40,11 @@ class TrainerClass(Trainable):
     def _setup(self, config):
         self.data_loader_train = get_pinned_object(pinned_obj_dict['data_loader_train'])
         self.data_loader_valid = get_pinned_object(pinned_obj_dict['data_loader_valid'])
-        self.model = get_model()
         self.cuda_available = torch.cuda.is_available()
         print("Cuda is available: {}".format(self.cuda_available))
+        self.model = get_model()
+        if self.cuda_available:
+            self.model.cuda()
         opt = getattr(torch.optim, self.config['optimizer'])
         self.optimizer = opt(self.model.classifier[6].parameters(), lr=self.config['lr'])
         self.batch_accumulation = self.config['batch_accumulation']
