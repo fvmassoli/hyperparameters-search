@@ -51,59 +51,60 @@ class TrainerClass(Trainable):
 
     def _train_iter(self):
         j = 1
-        i = 0
         self.model.train()
         self.optimizer.zero_grad()
         progress_bar = tq(self.data_loader_train)
         progress_bar.set_description("Training")
         avg_loss = 0.0
-        for batch_idx, (data, target) in enumerate(progress_bar, 1):
+        for batch_idx, (data, target) in enumerate(progress_bar):
             if self.cuda_available:
                 data = data.cuda(non_blocking=True)
                 target = target.cuda(non_blocking=True)
             output = self.model(data)
             loss = F.cross_entropy(output, target)
             loss.backward()
+            avg_loss += loss.item()
             if j % self.batch_accumulation == 0:
                 j = 1
                 self.optimizer.step()
                 self.optimizer.zero_grad()
             else:
                 j += 1
-            if i == (len(self.data_loader_train) / 2): break
-            i += 1
-            avg_loss += loss.item()
-            if batch_idx % (len(self.data_loader_train) / 8) == 0:
-                progress_bar.set_postfix({'Loss': '{:.3f}'.format((avg_loss / (batch_idx * target.shape[0])))})
+            if batch_idx % 20 == 0:
+                tmp_loss = avg_loss/(batch_idx+1)
+                progress_bar.set_postfix({'Loss': '{:.3f}'.format(tmp_loss)})
         torch.cuda.empty_cache()
+        # return avg_loss/len(self.data_loader_train)
 
     def _valid(self):
         self.model.eval()
         avg_loss = 0.0
         avg_acc = 0.0
+        n_samples = 0
         progress_bar = tq(self.data_loader_valid)
         progress_bar.set_description("Validation")
-        for batch_idx, (data, target) in enumerate(progress_bar, 1):
+        for batch_idx, (data, target) in enumerate(progress_bar):
             if self.cuda_available:
                 data = data.cuda(non_blocking=True)
                 target = target.cuda(non_blocking=True)
             output = self.model(data)
             loss = F.cross_entropy(output, target)
-            avg_loss += loss
+            avg_loss += loss.item()
             y_hat = output.argmax(dim=1)
             avg_acc += (target == y_hat).sum().item()
-            if batch_idx % (len(self.data_loader_valid) / 8) == 0:
-                l = avg_loss / (batch_idx * target.shape[0])
-                acc = avg_acc / (batch_idx * target.shape[0])
+            n_samples += len(target)
+            if batch_idx % 10 == 0:
+                l = avg_loss / (batch_idx+1)
+                acc = avg_acc / n_samples
                 metrics = {
-                    'loss': '{:.3f}'.format(l.item()),
+                    'loss': '{:.3f}'.format(l),
                     'acc': '{:.2f}%'.format(acc*100)
                 }
                 progress_bar.set_postfix(metrics)
-        loss = avg_loss / len(self.data_loader_valid.dataset)
-        acc = avg_acc / len(self.data_loader_valid.dataset)
+        loss = avg_loss / len(self.data_loader_valid)
+        acc = avg_acc / n_samples
         torch.cuda.empty_cache()
-        return {"loss": loss.detach().cpu().item(), "acc": acc}
+        return {"loss": loss, "acc": acc}
 
     def _train(self):
         self._train_iter()
@@ -161,16 +162,16 @@ def main(args):
     exp = Experiment(
         name=exp_name,
         run=trainable_name,
-        num_samples=10,  # the number of experiments
+        num_samples=args.numSamples,  # the number of experiments
         trial_resources={
             "cpu": args.numCpu,
             "gpu": args.numGpu
         },
-        checkpoint_freq=3,
+        checkpoint_freq=args.checkpointFreq,
         checkpoint_at_end=True,
         stop={
             reward_attr: 0.95,
-            "training_iteration": 9,  # how many times a specific config will be trained
+            "training_iteration": args.trainingIteration,  # how many times a specific config will be trained
         }
     )
 
@@ -190,9 +191,14 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('-s', '--seed', type=int, default=41, help='Set the randome generators seed (default: 41)')
-    parser.add_argument('-c', '--numCpu', type=int, default=4, help='Set the number of CPU to use (default: 4)')
-    parser.add_argument('-g', '--numGpu', type=int, default=0, help='Set the number of GPU to use (default: 0)')
-    parser.add_argument('-t', '--runTensorBoard', action='store_true', help='Run tensorboard (default: false)')
+    parser.add_argument('-s',  '--seed', type=int, default=41, help='Set the randome generators seed (default: 41)')
+    parser.add_argument('-c',  '--numCpu', type=int, default=4, help='Set the number of CPU to use (default: 4)')
+    parser.add_argument('-g',  '--numGpu', type=int, default=0, help='Set the number of GPU to use (default: 0)')
+    parser.add_argument('-ns', '--numSamples', type=int, default=1, help='Number of experiment configurations to be run (default: 1)')
+    parser.add_argument('-ti', '--trainingIteration', type=int, default=1,
+                        help='Number of training iterations for each experiment configuration (default: 1)')
+    parser.add_argument('-cf', '--checkpointFreq', type=int, default=5,
+                        help='Frequency (unit=iterations) to checkpoint the model (default: 5)')
+    parser.add_argument('-t',  '--runTensorBoard', action='store_true', help='Run tensorboard (default: false)')
     args = parser.parse_args()
     main(args)
