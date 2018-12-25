@@ -126,7 +126,7 @@ def main(args):
 
     ray.init()
 
-    t_loader, v_loader = get_loaders(train_batch_size=16)
+    t_loader, v_loader = get_loaders(train_batch_size=16, num_workers=1, data_folder=args.dataFolder)
     pinned_obj_dict['data_loader_train'] = pin_in_object_store(t_loader)
     pinned_obj_dict['data_loader_valid'] = pin_in_object_store(v_loader)
 
@@ -198,5 +198,6 @@ if __name__ == "__main__":
     parser.add_argument('-cf', '--checkpointFreq', type=int, default=0,
                         help='Frequency (unit=iterations) to checkpoint the model (default: 0 --- i.e. disabled)')
     parser.add_argument('-t',  '--runTensorBoard', action='store_true', help='Run tensorboard (default: false)')
+    parser.add_argument('-df', '--dataFolder', help='Path to main data folder')
     args = parser.parse_args()
     main(args)

@@ -49,10 +49,10 @@ def get_transforms(train, hf=0.5, rr_degrees=30, gs=0.3,
         ])
 
 
-def get_loaders(train_batch_size, num_workers=1):
+def get_loaders(train_batch_size, num_workers=1, data_folder=None):
     print("Loading data...")
     cuda_available = torch.cuda.is_available()
-    data_dir = '/media/fabiovalerio/Data/facebook_pytorch_challenge/pytorch_challenge/flower_data'
+    data_dir = data_folder
     train_dir = data_dir + '/train'
     valid_dir = data_dir + '/valid'
     train_data_set = ImageFolder(root=train_dir, transform=get_transforms(train=True))
