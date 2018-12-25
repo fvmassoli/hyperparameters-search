@@ -97,7 +97,7 @@ class TrainerClass(Trainable):
                 acc = avg_acc / (batch_idx * target.shape[0])
                 metrics = {
                     'loss': '{:.3f}'.format(l.item()),
-                    'acc': '{:.2f}%'.format(acc)
+                    'acc': '{:.2f}%'.format(acc*100)
                 }
                 progress_bar.set_postfix(metrics)
         loss = avg_loss / len(self.data_loader_valid.dataset)
