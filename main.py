@@ -119,14 +119,16 @@ class TrainerClass(Trainable):
 
 def main(args):
 
+    cuda_available = torch.cuda.is_available()
+
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    if torch.cuda.is_available():
+    if cuda_available:
         torch.cuda.manual_seed(args.seed)
 
     ray.init()
 
-    t_loader, v_loader = get_loaders(train_batch_size=16, num_workers=1, data_folder=args.dataFolder)
+    t_loader, v_loader = get_loaders(train_batch_size=16, num_workers=1, data_folder=args.dataFolder, cuda_available=cuda_available)
     pinned_obj_dict['data_loader_train'] = pin_in_object_store(t_loader)
     pinned_obj_dict['data_loader_valid'] = pin_in_object_store(v_loader)
 

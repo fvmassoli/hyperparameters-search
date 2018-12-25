@@ -49,14 +49,10 @@ def get_transforms(train, hf=0.5, rr_degrees=30, gs=0.3,
         ])
 
 
-def get_loaders(train_batch_size, num_workers=1, data_folder=None):
+def get_loaders(train_batch_size, num_workers=1, data_folder=None, cuda_available=False):
     print("Loading data...")
-    cuda_available = torch.cuda.is_available()
-    data_dir = data_folder
-    train_dir = data_dir + '/train'
-    valid_dir = data_dir + '/valid'
-    train_data_set = ImageFolder(root=train_dir, transform=get_transforms(train=True))
-    valid_data_set = ImageFolder(root=valid_dir, transform=get_transforms(train=False))
+    train_data_set = ImageFolder(root=data_folder+'/train', transform=get_transforms(train=True))
+    valid_data_set = ImageFolder(root=data_folder+'/valid', transform=get_transforms(train=False))
     weights = make_weights_for_balanced_classes(train_data_set.imgs, len(train_data_set.classes))
     weights = torch.DoubleTensor(weights)
     sampler = WeightedRandomSampler(weights, len(weights))
