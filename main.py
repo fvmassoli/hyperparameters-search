@@ -184,7 +184,7 @@ def main(args):
     ##################
     # Run experiments
     ##################
-    run_experiments(exp, search_alg=hos, scheduler=hpb, verbose=True)
+    run_experiments(exp, search_alg=hos, scheduler=hpb, verbose=False)
 
 
 if __name__ == "__main__":

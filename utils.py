@@ -49,7 +49,7 @@ def get_transforms(train, hf=0.5, rr_degrees=30, gs=0.3,
         ])
 
 
-def get_loaders(train_batch_size):
+def get_loaders(train_batch_size, num_workers=1):
     print("Loading data...")
     cuda_available = torch.cuda.is_available()
     data_dir = '/media/fabiovalerio/Data/facebook_pytorch_challenge/pytorch_challenge/flower_data'
@@ -63,11 +63,11 @@ def get_loaders(train_batch_size):
     train_data_loader = DataLoader(dataset=train_data_set,
                                    sampler=sampler,
                                    batch_size=train_batch_size,
-                                   num_workers=4,
+                                   num_workers=num_workers,
                                    pin_memory=cuda_available)
     valid_data_loader = DataLoader(dataset=valid_data_set,
                                    batch_size=8,
-                                   num_workers=4,
+                                   num_workers=num_workers,
                                    pin_memory=cuda_available)
     print("Data loaded!!!")
     return train_data_loader, valid_data_loader
