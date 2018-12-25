@@ -195,8 +195,8 @@ if __name__ == "__main__":
     parser.add_argument('-ns', '--numSamples', type=int, default=1, help='Number of experiment configurations to be run (default: 1)')
     parser.add_argument('-ti', '--trainingIteration', type=int, default=1,
                         help='Number of training iterations for each experiment configuration (default: 1)')
-    parser.add_argument('-cf', '--checkpointFreq', type=int, default=5,
-                        help='Frequency (unit=iterations) to checkpoint the model (default: 5)')
+    parser.add_argument('-cf', '--checkpointFreq', type=int, default=0,
+                        help='Frequency (unit=iterations) to checkpoint the model (default: 0 --- i.e. disabled)')
     parser.add_argument('-t',  '--runTensorBoard', action='store_true', help='Run tensorboard (default: false)')
     args = parser.parse_args()
     main(args)
