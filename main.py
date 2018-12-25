@@ -71,8 +71,7 @@ class TrainerClass(Trainable):
             else:
                 j += 1
             if batch_idx % 20 == 0:
-                tmp_loss = avg_loss/(batch_idx+1)
-                progress_bar.set_postfix({'Loss': '{:.3f}'.format(tmp_loss)})
+                progress_bar.set_postfix({'Loss': '{:.3f}'.format(avg_loss/(batch_idx+1))})
         torch.cuda.empty_cache()
         # return avg_loss/len(self.data_loader_train)
 
@@ -94,10 +93,9 @@ class TrainerClass(Trainable):
             avg_acc += (target == y_hat).sum().item()
             n_samples += len(target)
             if batch_idx % 10 == 0:
-                l = avg_loss / (batch_idx+1)
                 acc = avg_acc / n_samples
                 metrics = {
-                    'loss': '{:.3f}'.format(l),
+                    'loss': '{:.3f}'.format(avg_loss/(batch_idx+1)),
                     'acc': '{:.2f}%'.format(acc*100)
                 }
                 progress_bar.set_postfix(metrics)
