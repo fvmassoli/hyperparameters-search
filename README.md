@@ -1,3 +1,8 @@
 # hyperparameters-search
 
-python main.py -s 41 -c 7 -g 1 -ns 10 -ti 3 -t
+### For help
+python main.py -h
+
+
+### Usage example
+python main.py -s <random_generator_seed> -c <nb_of_cpu> -g <nb_og_gpu> -ns <nb_of_experiments> -ti <nb_of_training_iterations_for_each_experiment> -df <main_data_folder>

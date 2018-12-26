@@ -2,20 +2,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-##################
-# Pytorch imports
-##################
-import torch.nn.functional as F
-
 #################
 # Python imports
 #################
 import os
 import time
-import argparse
 import threading
 import numpy as np
 from tqdm import tqdm as tq
+
+##################
+# Pytorch imports
+##################
+import torch.nn.functional as F
 
 ###############
 # Tune imports
@@ -40,6 +39,7 @@ class TrainerClass(Trainable):
     def _setup(self, config):
         self.data_loader_train = get_pinned_object(pinned_obj_dict['data_loader_train'])
         self.data_loader_valid = get_pinned_object(pinned_obj_dict['data_loader_valid'])
+        self.args = get_pinned_object(pinned_obj_dict['args'])
         self.cuda_available = torch.cuda.is_available()
         print("Cuda is available: {}".format(self.cuda_available))
         self.model = get_model()
@@ -70,7 +70,7 @@ class TrainerClass(Trainable):
                 self.optimizer.zero_grad()
             else:
                 j += 1
-            if batch_idx % 20 == 0:
+            if batch_idx % self.args.logFrequency == 0:
                 progress_bar.set_postfix({'Loss': '{:.3f}'.format(avg_loss/(batch_idx+1))})
         torch.cuda.empty_cache()
         # return avg_loss/len(self.data_loader_train)
@@ -92,7 +92,7 @@ class TrainerClass(Trainable):
             y_hat = output.argmax(dim=1)
             avg_acc += (target == y_hat).sum().item()
             n_samples += len(target)
-            if batch_idx % 10 == 0:
+            if batch_idx % self.args.logFrequency == 0:
                 acc = avg_acc / n_samples
                 metrics = {
                     'loss': '{:.3f}'.format(avg_loss/(batch_idx+1)),
@@ -131,6 +131,7 @@ def main(args):
     t_loader, v_loader = get_loaders(train_batch_size=16, num_workers=1, data_folder=args.dataFolder, cuda_available=cuda_available)
     pinned_obj_dict['data_loader_train'] = pin_in_object_store(t_loader)
     pinned_obj_dict['data_loader_valid'] = pin_in_object_store(v_loader)
+    pinned_obj_dict['args'] = pin_in_object_store(args)
 
     trainable_name = 'hyp_search_train'
     register_trainable(trainable_name, TrainerClass)
@@ -150,7 +151,7 @@ def main(args):
     ##############################
     space = {
         'lr': hp.uniform('lr', 0.001, 0.1),
-        'optimizer': hp.choice("optimizer", ['Adam', 'SGD', 'Adadelta']),
+        'optimizer': hp.choice("optimizer", ['SGD', 'Adam']), #, 'Adadelta']), # Adadelta gets the worst results
         'batch_accumulation': hp.choice("batch_accumulation", [4, 8, 16])
     }
     hos = HyperOptSearch(space, max_concurrent=4, reward_attr=reward_attr)
@@ -190,16 +191,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='')
-    parser.add_argument('-s',  '--seed', type=int, default=41, help='Set the randome generators seed (default: 41)')
-    parser.add_argument('-c',  '--numCpu', type=int, default=4, help='Set the number of CPU to use (default: 4)')
-    parser.add_argument('-g',  '--numGpu', type=int, default=0, help='Set the number of GPU to use (default: 0)')
-    parser.add_argument('-ns', '--numSamples', type=int, default=1, help='Number of experiment configurations to be run (default: 1)')
-    parser.add_argument('-ti', '--trainingIteration', type=int, default=1,
-                        help='Number of training iterations for each experiment configuration (default: 1)')
-    parser.add_argument('-cf', '--checkpointFreq', type=int, default=0,
-                        help='Frequency (unit=iterations) to checkpoint the model (default: 0 --- i.e. disabled)')
-    parser.add_argument('-t',  '--runTensorBoard', action='store_true', help='Run tensorboard (default: false)')
-    parser.add_argument('-df', '--dataFolder', help='Path to main data folder')
-    args = parser.parse_args()
-    main(args)
+    main(get_args())
