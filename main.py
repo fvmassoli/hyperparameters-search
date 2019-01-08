@@ -37,16 +37,22 @@ pinned_obj_dict = {}
 
 class TrainerClass(Trainable):
     def _setup(self, config):
+        torch.backends.cudnn.deterministic = True
+        self.cuda_available = torch.cuda.is_available()
+        self.args = get_pinned_object(pinned_obj_dict['args'])
+        seed = self.args.seed
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        if self.cuda_available:
+            torch.cuda.manual_seed(seed)
         self.data_loader_train = get_pinned_object(pinned_obj_dict['data_loader_train'])
         self.data_loader_valid = get_pinned_object(pinned_obj_dict['data_loader_valid'])
-        self.args = get_pinned_object(pinned_obj_dict['args'])
-        self.cuda_available = torch.cuda.is_available()
         print("Cuda is available: {}".format(self.cuda_available))
         self.model = get_model()
         if self.cuda_available:
             self.model.cuda()
         opt = getattr(torch.optim, self.config['optimizer'])
-        self.optimizer = opt(self.model.classifier[6].parameters(), lr=self.config['lr'])
+        self.optimizer = opt(self.model.parameters(), lr=self.config['lr'])
         self.batch_accumulation = self.config['batch_accumulation']
 
     def _train_iter(self):
@@ -119,16 +125,10 @@ class TrainerClass(Trainable):
 
 def main(args):
 
-    cuda_available = torch.cuda.is_available()
+    ray.init(num_cpus=args.rayNumCpu, num_gpus=args.rayNumGpu)
 
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    if cuda_available:
-        torch.cuda.manual_seed(args.seed)
-
-    ray.init()
-
-    t_loader, v_loader = get_loaders(train_batch_size=16, num_workers=1, data_folder=args.dataFolder, cuda_available=cuda_available)
+    t_loader, v_loader = get_loaders(train_batch_size=16, num_workers=1, data_folder=args.dataFolder,
+                                     cuda_available=torch.cuda.is_available())
     pinned_obj_dict['data_loader_train'] = pin_in_object_store(t_loader)
     pinned_obj_dict['data_loader_valid'] = pin_in_object_store(v_loader)
     pinned_obj_dict['args'] = pin_in_object_store(args)
@@ -159,14 +159,14 @@ def main(args):
     #####################
     # Define experiments
     #####################
-    exp_name = "hyp_search_hyperband_hyperopt_{}".format(time.strftime("%Y-%m-%d_%H.%M.%S"))
+    exp_name = "resnet152_hyp_search_hyperband_hyperopt_{}".format(time.strftime("%Y-%m-%d_%H.%M.%S"))
     exp = Experiment(
         name=exp_name,
         run=trainable_name,
         num_samples=args.numSamples,  # the number of experiments
-        trial_resources={
-            "cpu": args.numCpu,
-            "gpu": args.numGpu
+        resources_per_trial={
+            "cpu": args.trialNumCpu,
+            "gpu": args.trialNumGpu
         },
         checkpoint_freq=args.checkpointFreq,
         checkpoint_at_end=True,

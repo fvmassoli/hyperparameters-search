@@ -18,8 +18,14 @@ from torch.utils.data.sampler import WeightedRandomSampler
 def get_args():
     parser = argparse.ArgumentParser(description='hyp_search_tune')
     parser.add_argument('-s', '--seed', type=int, default=41, help='Set the randome generators seed (default: 41)')
-    parser.add_argument('-c', '--numCpu', type=int, default=4, help='Set the number of CPU to use (default: 4)')
-    parser.add_argument('-g', '--numGpu', type=int, default=0, help='Set the number of GPU to use (default: 0)')
+    parser.add_argument('-rc', '--rayNumCpu', type=int, default=4,
+                        help='Set the number of CPU to be used by ray (default: 4)')
+    parser.add_argument('-rg', '--rayNumGpu', type=int, default=4,
+                        help='Set the number of GPU to be used by ray. It can be a fraction (default: 0)')
+    parser.add_argument('-c', '--trialNumCpu', type=int, default=2,
+                        help='Set the number of CPU to use in each experiment (default: 2)')
+    parser.add_argument('-g', '--trialNumGpu', type=int, default=0,
+                        help='Set the number of GPU to use in each experiment (default: 0)')
     parser.add_argument('-ns', '--numSamples', type=int, default=1,
                         help='Number of experiment configurations to be run (default: 1)')
     parser.add_argument('-ti', '--trainingIteration', type=int, default=1,
@@ -94,14 +100,27 @@ def get_loaders(train_batch_size, num_workers=1, data_folder=None, cuda_availabl
 
 def get_model():
     print("Loading model...")
-    model = models.vgg16(pretrained=True)
+    # model = models.vgg16_bn(pretrained=True)
+    # for n, p in model.named_parameters():
+    #     p.requires_grad = False
+    # model.classifier[6] = nn.Linear(in_features=4096, out_features=102, bias=True)
+    # nn.init.xavier_normal_(model.classifier[6].weight)
+    # model.classifier[6].bias.data.fill_(0)
+    # model.classifier[6].weight.requires_grad = True
+    # model.classifier[6].bias.requires_grad = True
+    # model = models.resnet50(pretrained=True)
+    # model = models.resnet101(pretrained=True)
+    model = models.resnet152(pretrained=True)
     for n, p in model.named_parameters():
         p.requires_grad = False
-    model.classifier[6] = nn.Linear(in_features=4096, out_features=102, bias=True)
-    nn.init.xavier_normal_(model.classifier[6].weight)
-    model.classifier[6].bias.data.fill_(0)
-    model.classifier[6].weight.requires_grad = True
-    model.classifier[6].bias.requires_grad = True
+    model.fc = nn.Linear(in_features=2048, out_features=102, bias=True)
+    nn.init.xavier_normal_(model.fc.weight)
+    model.fc.bias.data.fill_(0)
+    model.fc.weight.requires_grad = True
+    model.fc.bias.requires_grad = True
+    for n, p in model.named_parameters():
+        if p.requires_grad:
+            print("Parameter that will be trained: {}".format(n))
     print("Model loaded!!!")
     return model
 
